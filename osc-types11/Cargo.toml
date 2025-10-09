@@ -1,0 +1,12 @@
+[package]
+name = "osc-types11"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "OSC 1.1 type definitions (no_std)."
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+osc-types-core = { version = "0.1", path = "../osc-types-core", default-features = false, features = ["osc-1-1"] }

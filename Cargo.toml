@@ -1,0 +1,11 @@
+[workspace]
+members = [
+  "osc-types-core",
+  "osc-types10",
+  "osc-types11",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+license = "MIT OR Apache-2.0"

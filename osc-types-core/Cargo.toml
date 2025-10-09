@@ -1,0 +1,19 @@
+[package]
+name = "osc-types-core"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Pure OSC type definitions (no I/O, no codec), no_std-friendly."
+
+[lib]
+crate-type = ["rlib"]
+
+[features]
+default = []
+std = []
+osc-1-1 = []
+serde = ["dep:serde", "dep:serde_bytes"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"], optional = true }
+serde_bytes = { version = "0.11", optional = true }
