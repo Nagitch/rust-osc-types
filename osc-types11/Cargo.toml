@@ -1,12 +1,27 @@
 [package]
 name = "osc-types11"
-version = "0.1.0"
+version = "0.1.0-alpha.1"
 edition = "2021"
+rust-version = "1.70"
+description = "Open Sound Control (OSC 1.1) message and bundle types. (no_std optional)"
 license = "MIT OR Apache-2.0"
-description = "OSC 1.1 type definitions (no_std)."
-
-[lib]
-crate-type = ["rlib"]
+repository = "https://github.com/Nagitch/rust-osc-types"
+readme = "README.md"
+keywords = ["osc", "audio", "protocol", "messaging"]
+categories = ["network-programming", "encoding", "parsing"]
+include = ["Cargo.toml", "LICENSE*", "README.md", "src/**"]
 
 [dependencies]
-osc-types-core = { version = "0.1", path = "../osc-types-core", default-features = false, features = ["osc-1-1"] }
+osc-types10 = { version = "=0.1.0-alpha.1" }
+
+[features]
+default = ["std"]
+std = []
+no_std = []
+unstable = []
+
+[badges]
+maintenance = { status = "experimental" }
+
+[package.metadata.docs.rs]
+all-features = true
