@@ -1,0 +1,13 @@
+# Ignore Git metadata and local configuration
+.git
+.gitignore
+.devcontainer
+
+# Build artifacts
+/target
+**/target
+
+# Editor and OS specific files
+*.swp
+*.swo
+.DS_Store
