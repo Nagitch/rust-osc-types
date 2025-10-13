@@ -1,0 +1,22 @@
+{
+  "name": "rust-osc-types",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml",
+        "serayuzgur.crates"
+      ],
+      "settings": {
+        "rust-analyzer.cargo.allFeatures": true,
+        "editor.formatOnSave": true
+      }
+    }
+  },
+  "postCreateCommand": "cargo fetch",
+  "remoteUser": "vscode"
+}
