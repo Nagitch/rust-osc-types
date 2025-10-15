@@ -43,3 +43,72 @@ impl<'a> Message<'a> {
         Self { address, args }
     }
 }
+
+/// Example placeholder type for OSC bundles
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Bundle<'a> {
+    /// OSC time tag
+    pub timetag: u64,
+    /// Messages contained in the bundle
+    pub messages: Vec<Message<'a>>,
+}
+
+impl<'a> Bundle<'a> {
+    /// Create a new OSC bundle
+    pub fn new(timetag: u64, messages: Vec<Message<'a>>) -> Self {
+        Self { timetag, messages }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Bundle, Message};
+
+    #[test]
+    fn message_new_sets_address_and_args() {
+        let msg = Message::new("/test", vec!["one", "two"]);
+
+        assert_eq!(msg.address, "/test");
+        assert_eq!(msg.args, vec!["one", "two"]);
+    }
+
+    #[test]
+    fn message_equality_compares_contents() {
+        let lhs = Message::new("/foo", vec!["a", "b"]);
+        let rhs = Message::new("/foo", vec!["a", "b"]);
+        let different_address = Message::new("/bar", vec!["a", "b"]);
+        let different_args = Message::new("/foo", vec!["a"]);
+
+        assert_eq!(lhs, rhs);
+        assert_ne!(lhs, different_address);
+        assert_ne!(lhs, different_args);
+    }
+
+    #[test]
+    fn bundle_new_sets_timetag_and_messages() {
+        let messages = vec![
+            Message::new("/bundle/one", vec!["1"]),
+            Message::new("/bundle/two", vec!["2"]),
+        ];
+        let bundle = Bundle::new(42, messages.clone());
+
+        assert_eq!(bundle.timetag, 42);
+        assert_eq!(bundle.messages, messages);
+    }
+
+    #[test]
+    fn bundle_equality_compares_contents() {
+        let messages = vec![
+            Message::new("/bundle", vec!["a"]),
+            Message::new("/bundle", vec!["b"]),
+        ];
+        let lhs = Bundle::new(1, messages.clone());
+        let rhs = Bundle::new(1, messages);
+        let different_timetag = Bundle::new(2, vec![Message::new("/bundle", vec!["a"])]);
+        let different_messages = Bundle::new(1, vec![Message::new("/bundle", vec!["c"])]);
+
+        assert_eq!(lhs, rhs);
+        assert_ne!(lhs, different_timetag);
+        assert_ne!(lhs, different_messages);
+    }
+}
