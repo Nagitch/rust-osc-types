@@ -13,8 +13,8 @@ Defines message and bundle types for Open Sound Control 1.0.
 
 ## Example
 ```rust
-use osc_types10::Message;
-let msg = Message::new("/example", vec!["abc".into()]);
+use osc_types10::{Message, OscType};
+let msg = Message::new("/example", vec![OscType::String("abc")]);
 println!("{msg:?}");
 ```
 "#]
@@ -28,24 +28,43 @@ use std::vec::Vec;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 
-/// Example placeholder type
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// OSC argument types as defined in OSC 1.0 specification
+#[derive(Debug, Clone, PartialEq)]
+pub enum OscType<'a> {
+    /// 32-bit integer (i)
+    Int(i32),
+    /// 32-bit IEEE 754 float (f)
+    Float(f32),
+    /// Null-terminated string (s)
+    String(&'a str),
+    /// Binary blob (b)
+    Blob(&'a [u8]),
+}
+
+/// OSC Message as defined in OSC 1.0 specification
+#[derive(Debug, Clone, PartialEq)]
 pub struct Message<'a> {
-    /// OSC address
+    /// OSC address pattern
     pub address: &'a str,
-    /// Arguments
-    pub args: Vec<&'a str>,
+    /// Arguments of the message
+    pub args: Vec<OscType<'a>>,
 }
 
 impl<'a> Message<'a> {
     /// Create a new OSC message
-    pub fn new(address: &'a str, args: Vec<&'a str>) -> Self {
+    pub fn new(address: &'a str, args: Vec<OscType<'a>>) -> Self {
         Self { address, args }
+    }
+
+    /// Create a new OSC message with string arguments (convenience method)
+    pub fn with_strings(address: &'a str, string_args: Vec<&'a str>) -> Self {
+        let args = string_args.into_iter().map(OscType::String).collect();
+        Self::new(address, args)
     }
 }
 
 /// Example placeholder type for OSC bundles
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Bundle<'a> {
     /// OSC time tag
     pub timetag: u64,
@@ -62,22 +81,28 @@ impl<'a> Bundle<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Bundle, Message};
+    use super::{Bundle, Message, OscType};
+
+    #[cfg(not(feature = "std"))]
+    use alloc::vec;
 
     #[test]
     fn message_new_sets_address_and_args() {
-        let msg = Message::new("/test", vec!["one", "two"]);
+        let msg = Message::with_strings("/test", vec!["one", "two"]);
 
         assert_eq!(msg.address, "/test");
-        assert_eq!(msg.args, vec!["one", "two"]);
+        assert_eq!(
+            msg.args,
+            vec![OscType::String("one"), OscType::String("two")]
+        );
     }
 
     #[test]
     fn message_equality_compares_contents() {
-        let lhs = Message::new("/foo", vec!["a", "b"]);
-        let rhs = Message::new("/foo", vec!["a", "b"]);
-        let different_address = Message::new("/bar", vec!["a", "b"]);
-        let different_args = Message::new("/foo", vec!["a"]);
+        let lhs = Message::with_strings("/foo", vec!["a", "b"]);
+        let rhs = Message::with_strings("/foo", vec!["a", "b"]);
+        let different_address = Message::with_strings("/bar", vec!["a", "b"]);
+        let different_args = Message::with_strings("/foo", vec!["a"]);
 
         assert_eq!(lhs, rhs);
         assert_ne!(lhs, different_address);
@@ -85,10 +110,26 @@ mod tests {
     }
 
     #[test]
+    fn message_supports_mixed_types() {
+        let msg = Message::new(
+            "/mixed",
+            vec![
+                OscType::Int(42),
+                OscType::Float(3.14),
+                OscType::String("hello"),
+                OscType::Blob(&[0x01, 0x02, 0x03]),
+            ],
+        );
+
+        assert_eq!(msg.address, "/mixed");
+        assert_eq!(msg.args.len(), 4);
+    }
+
+    #[test]
     fn bundle_new_sets_timetag_and_messages() {
         let messages = vec![
-            Message::new("/bundle/one", vec!["1"]),
-            Message::new("/bundle/two", vec!["2"]),
+            Message::with_strings("/bundle/one", vec!["1"]),
+            Message::with_strings("/bundle/two", vec!["2"]),
         ];
         let bundle = Bundle::new(42, messages.clone());
 
@@ -99,13 +140,13 @@ mod tests {
     #[test]
     fn bundle_equality_compares_contents() {
         let messages = vec![
-            Message::new("/bundle", vec!["a"]),
-            Message::new("/bundle", vec!["b"]),
+            Message::with_strings("/bundle", vec!["a"]),
+            Message::with_strings("/bundle", vec!["b"]),
         ];
         let lhs = Bundle::new(1, messages.clone());
         let rhs = Bundle::new(1, messages);
-        let different_timetag = Bundle::new(2, vec![Message::new("/bundle", vec!["a"])]);
-        let different_messages = Bundle::new(1, vec![Message::new("/bundle", vec!["c"])]);
+        let different_timetag = Bundle::new(2, vec![Message::with_strings("/bundle", vec!["a"])]);
+        let different_messages = Bundle::new(1, vec![Message::with_strings("/bundle", vec!["c"])]);
 
         assert_eq!(lhs, rhs);
         assert_ne!(lhs, different_timetag);
