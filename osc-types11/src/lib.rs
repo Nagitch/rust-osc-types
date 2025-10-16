@@ -6,23 +6,23 @@
 //!
 //! **Experimental / Not for production use**.
 
-pub use osc_types10::{Bundle, Message};
+pub use osc_types10::{Bundle, Message, OscType};
 
 #[cfg(test)]
 mod tests {
-    use super::{Bundle, Message};
+    use super::{Bundle, Message, OscType};
 
     #[test]
     fn re_exports_message_type() {
-        let msg = Message::new("/re-export", vec!["arg"]);
+        let msg = Message::with_strings("/re-export", vec!["arg"]);
 
         assert_eq!(msg.address, "/re-export");
-        assert_eq!(msg.args, vec!["arg"]);
+        assert_eq!(msg.args, vec![OscType::String("arg")]);
     }
 
     #[test]
     fn re_exports_bundle_type() {
-        let bundle = Bundle::new(123, vec![Message::new("/re-export", vec!["arg"])]);
+        let bundle = Bundle::new(123, vec![Message::with_strings("/re-export", vec!["arg"])]);
 
         assert_eq!(bundle.timetag, 123);
         assert_eq!(bundle.messages.len(), 1);
