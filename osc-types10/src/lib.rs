@@ -26,7 +26,7 @@ extern crate alloc;
 use std::vec::Vec;
 
 #[cfg(not(feature = "std"))]
-use alloc::{string::String, string::ToString, vec::Vec};
+use alloc::vec::Vec;
 
 /// OSC argument types as defined in OSC 1.0 specification
 #[derive(Debug, Clone, PartialEq)]
@@ -46,8 +46,6 @@ pub enum OscType<'a> {
 pub struct Message<'a> {
     /// OSC address pattern
     pub address: &'a str,
-    /// Type tag string indicating the types of the arguments
-    pub type_tag: String,
     /// Arguments of the message
     pub args: Vec<OscType<'a>>,
 }
@@ -55,22 +53,7 @@ pub struct Message<'a> {
 impl<'a> Message<'a> {
     /// Create a new OSC message
     pub fn new(address: &'a str, args: Vec<OscType<'a>>) -> Self {
-        // Generate type tag string from arguments
-        let mut type_tag = ",".to_string();
-        for arg in &args {
-            match arg {
-                OscType::Int(_) => type_tag.push('i'),
-                OscType::Float(_) => type_tag.push('f'),
-                OscType::String(_) => type_tag.push('s'),
-                OscType::Blob(_) => type_tag.push('b'),
-            }
-        }
-
-        Self {
-            address,
-            type_tag,
-            args,
-        }
+        Self { address, args }
     }
 
     /// Create a new OSC message with string arguments (convenience method)
@@ -139,7 +122,6 @@ mod tests {
         );
 
         assert_eq!(msg.address, "/mixed");
-        assert_eq!(msg.type_tag, ",ifsb");
         assert_eq!(msg.args.len(), 4);
     }
 
