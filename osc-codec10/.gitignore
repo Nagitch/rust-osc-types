@@ -1,0 +1,25 @@
+# Cargo build artifacts
+/target/
+/debug/
+
+# Rust tool backups
+**/*.rs.bk
+
+# Coverage and profiling output
+*.profraw
+*.profdata
+/coverage/
+
+# Editor and OS cruft
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+*.code-workspace
+
+# Local environment overrides
+.env
+.env.local
+.env.*.local
