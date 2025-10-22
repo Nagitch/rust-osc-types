@@ -1,6 +1,6 @@
-use std::net::UdpSocket;
-use osc_types10::{Message, OscType};
 use osc_codec10::encode_message;
+use osc_types10::{Message, OscType};
+use std::net::UdpSocket;
 
 fn main() -> std::io::Result<()> {
     let sock = UdpSocket::bind("0.0.0.0:0")?;
