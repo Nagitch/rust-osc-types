@@ -221,14 +221,39 @@ pub fn decode_bundle<'a>(bytes: &'a [u8]) -> Result<(Bundle<'a>, usize)> {
 
         let element_bytes = &bytes[off..off + size];
 
-        // Determine if this is a message or a bundle by checking the first element
-        // If it starts with "#bundle", it's a bundle; otherwise, it's a message
-        if element_bytes.starts_with(BUNDLE_TAG.as_bytes()) {
-            let (bundle, used) = decode_bundle(element_bytes)?;
-            if used != size {
-                return Err(Error::InvalidTag);
+        // Try to determine if this is a bundle by checking if it has a valid bundle structure
+        // A bundle must have at minimum: "#bundle\0" (8 bytes aligned) + 8-byte timetag = 16 bytes
+        let is_bundle =
+            if element_bytes.len() >= 16 && element_bytes.starts_with(BUNDLE_TAG.as_bytes()) {
+                // Check if it's properly null-terminated and 4-byte aligned like a real bundle
+                let tag_end = BUNDLE_TAG.len();
+                element_bytes.get(tag_end) == Some(&0) && {
+                    // Calculate where the timetag should start (after null-terminated "#bundle" + padding)
+                    let tag_with_null_len = tag_end + 1;
+                    let padding = pad4_len(tag_with_null_len);
+                    let timetag_start = tag_with_null_len + padding;
+                    // Ensure we have enough bytes for the timetag
+                    element_bytes.len() >= timetag_start + 8
+                }
+            } else {
+                false
+            };
+
+        if is_bundle {
+            // Try to decode as bundle first, fall back to message if it fails
+            match decode_bundle(element_bytes) {
+                Ok((bundle, used)) if used == size => {
+                    packets.push(OscPacket::Bundle(bundle));
+                }
+                _ => {
+                    // Bundle decoding failed, treat as message
+                    let (msg, used) = decode_message(element_bytes)?;
+                    if used != size {
+                        return Err(Error::InvalidTag);
+                    }
+                    packets.push(OscPacket::Message(msg));
+                }
             }
-            packets.push(OscPacket::Bundle(bundle));
         } else {
             let (msg, used) = decode_message(element_bytes)?;
             if used != size {
