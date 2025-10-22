@@ -1,6 +1,6 @@
 [package]
 name = "osc-codec10"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Minimal, zero-copy-leaning OSC 1.0 encoder/decoder for osc-types10"
@@ -10,8 +10,8 @@ keywords = ["osc", "open-sound-control", "audio", "protocol"]
 categories = ["encoding", "parsing", "network-programming"]
 
 [dependencies]
-# Use the local version for development
-osc-types10 = { path = "../osc-types10" }
+# Use the published version
+osc-types10 = { version = "0.1.0-alpha.2" }
 byteorder = { version = "1", default-features = false }
 
 [features]
