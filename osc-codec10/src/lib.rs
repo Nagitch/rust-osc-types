@@ -45,10 +45,10 @@ fn put_str(buf: &mut Vec<u8>, s: &str) {
     buf.extend_from_slice(s.as_bytes());
     buf.push(0);
     let pad = pad4_len(s.len() + 1);
-    buf.extend(core::iter::repeat(0).take(pad));
+    buf.extend(std::iter::repeat_n(0, pad));
 }
 
-fn get_cstr_4<'a>(bytes: &'a [u8], mut off: usize) -> Result<(&'a str, usize)> {
+fn get_cstr_4(bytes: &[u8], mut off: usize) -> Result<(&str, usize)> {
     // Find NUL terminator
     let start = off;
     while off < bytes.len() && bytes[off] != 0 {
@@ -125,7 +125,7 @@ pub fn encode_message(msg: &Message<'_>) -> Vec<u8> {
                 put_i32(&mut buf, b.len() as i32);
                 buf.extend_from_slice(b);
                 let pad = pad4_len(b.len());
-                buf.extend(core::iter::repeat(0).take(pad));
+                buf.extend(std::iter::repeat_n(0, pad));
             }
         }
     }
