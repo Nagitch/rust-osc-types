@@ -1,5 +1,23 @@
+use osc_codec10::{decode_bundle, decode_message};
+use osc_types10::OscPacket;
 use std::net::UdpSocket;
-use osc_codec10::{decode_message, decode_bundle};
+
+fn count_items_in_bundle(bundle: &osc_types10::Bundle) -> (usize, usize) {
+    let mut messages = 0;
+    let mut bundles = 0;
+    for packet in &bundle.packets {
+        match packet {
+            OscPacket::Message(_) => messages += 1,
+            OscPacket::Bundle(nested) => {
+                bundles += 1;
+                let (nested_msgs, nested_bundles) = count_items_in_bundle(nested);
+                messages += nested_msgs;
+                bundles += nested_bundles;
+            }
+        }
+    }
+    (messages, bundles)
+}
 
 fn main() -> std::io::Result<()> {
     let sock = UdpSocket::bind("0.0.0.0:9000")?;
@@ -17,7 +35,14 @@ fn main() -> std::io::Result<()> {
             }
             Some(b'#') => {
                 let (bundle, _used) = decode_bundle(data).expect("decode bundle");
-                println!("bundle timetag={} messages={}", bundle.timetag, bundle.messages.len());
+                let (total_messages, total_bundles) = count_items_in_bundle(&bundle);
+                println!(
+                    "bundle timetag={} direct_packets={} total_messages={} total_bundles={}",
+                    bundle.timetag,
+                    bundle.packets.len(),
+                    total_messages,
+                    total_bundles
+                );
             }
             _ => eprintln!("unknown packet"),
         }

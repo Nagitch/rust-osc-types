@@ -10,8 +10,8 @@ keywords = ["osc", "open-sound-control", "audio", "protocol"]
 categories = ["encoding", "parsing", "network-programming"]
 
 [dependencies]
-# Use the user's crate directly from GitHub (subcrate path osc-types10). Adjust if you publish to crates.io.
-osc-types10 = { git = "https://github.com/Nagitch/rust-osc-types", package = "osc-types10" }
+# Use the local version for development
+osc-types10 = { path = "../osc-types10" }
 byteorder = { version = "1", default-features = false }
 
 [features]
