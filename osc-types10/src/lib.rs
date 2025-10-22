@@ -28,6 +28,15 @@ use std::vec::Vec;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 
+/// OSC packet - either a message or a bundle
+#[derive(Debug, Clone, PartialEq)]
+pub enum OscPacket<'a> {
+    /// An OSC message
+    Message(Message<'a>),
+    /// An OSC bundle
+    Bundle(Bundle<'a>),
+}
+
 /// OSC argument types as defined in OSC 1.0 specification
 #[derive(Debug, Clone, PartialEq)]
 pub enum OscType<'a> {
@@ -63,25 +72,49 @@ impl<'a> Message<'a> {
     }
 }
 
-/// Example placeholder type for OSC bundles
+/// OSC Bundle as defined in OSC 1.0 specification
+///
+/// Bundles can contain both messages and nested bundles, allowing for hierarchical organization
+/// of OSC data with precise timing control.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Bundle<'a> {
-    /// OSC time tag
+    /// OSC time tag (64-bit NTP timestamp)
     pub timetag: u64,
-    /// Messages contained in the bundle
-    pub messages: Vec<Message<'a>>,
+    /// Packets contained in the bundle (messages and/or nested bundles)
+    pub packets: Vec<OscPacket<'a>>,
 }
 
 impl<'a> Bundle<'a> {
     /// Create a new OSC bundle
-    pub fn new(timetag: u64, messages: Vec<Message<'a>>) -> Self {
-        Self { timetag, messages }
+    pub fn new(timetag: u64, packets: Vec<OscPacket<'a>>) -> Self {
+        Self { timetag, packets }
+    }
+
+    /// Create a new OSC bundle with only messages (convenience method)
+    pub fn with_messages(timetag: u64, messages: Vec<Message<'a>>) -> Self {
+        let packets = messages.into_iter().map(OscPacket::Message).collect();
+        Self::new(timetag, packets)
+    }
+
+    /// Create a new empty bundle
+    pub fn empty(timetag: u64) -> Self {
+        Self::new(timetag, Vec::new())
+    }
+
+    /// Add a message to the bundle
+    pub fn add_message(&mut self, message: Message<'a>) {
+        self.packets.push(OscPacket::Message(message));
+    }
+
+    /// Add a nested bundle to the bundle
+    pub fn add_bundle(&mut self, bundle: Bundle<'a>) {
+        self.packets.push(OscPacket::Bundle(bundle));
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Bundle, Message, OscType};
+    use super::{Bundle, Message, OscPacket, OscType};
 
     #[cfg(not(feature = "std"))]
     use alloc::vec;
@@ -126,15 +159,21 @@ mod tests {
     }
 
     #[test]
-    fn bundle_new_sets_timetag_and_messages() {
+    fn bundle_new_sets_timetag_and_packets() {
         let messages = vec![
             Message::with_strings("/bundle/one", vec!["1"]),
             Message::with_strings("/bundle/two", vec!["2"]),
         ];
-        let bundle = Bundle::new(42, messages.clone());
+        let bundle = Bundle::with_messages(42, messages.clone());
 
         assert_eq!(bundle.timetag, 42);
-        assert_eq!(bundle.messages, messages);
+        // Check that packets contain the expected messages
+        assert_eq!(bundle.packets.len(), 2);
+        if let OscPacket::Message(ref msg) = bundle.packets[0] {
+            assert_eq!(msg, &messages[0]);
+        } else {
+            panic!("Expected message in bundle");
+        }
     }
 
     #[test]
@@ -143,13 +182,92 @@ mod tests {
             Message::with_strings("/bundle", vec!["a"]),
             Message::with_strings("/bundle", vec!["b"]),
         ];
-        let lhs = Bundle::new(1, messages.clone());
-        let rhs = Bundle::new(1, messages);
-        let different_timetag = Bundle::new(2, vec![Message::with_strings("/bundle", vec!["a"])]);
-        let different_messages = Bundle::new(1, vec![Message::with_strings("/bundle", vec!["c"])]);
+        let lhs = Bundle::with_messages(1, messages.clone());
+        let rhs = Bundle::with_messages(1, messages);
+        let different_timetag =
+            Bundle::with_messages(2, vec![Message::with_strings("/bundle", vec!["a"])]);
+        let different_messages =
+            Bundle::with_messages(1, vec![Message::with_strings("/bundle", vec!["c"])]);
 
         assert_eq!(lhs, rhs);
         assert_ne!(lhs, different_timetag);
         assert_ne!(lhs, different_messages);
+    }
+
+    #[test]
+    fn bundle_supports_nested_bundles() {
+        let inner_bundle = Bundle::with_messages(
+            100,
+            vec![Message::with_strings("/inner/msg", vec!["inner"])],
+        );
+        let mut outer_bundle = Bundle::empty(200);
+        outer_bundle.add_message(Message::with_strings("/outer/msg", vec!["outer"]));
+        outer_bundle.add_bundle(inner_bundle.clone());
+
+        assert_eq!(outer_bundle.timetag, 200);
+        assert_eq!(outer_bundle.packets.len(), 2);
+
+        // Check the outer message
+        if let OscPacket::Message(ref msg) = outer_bundle.packets[0] {
+            assert_eq!(msg.address, "/outer/msg");
+        } else {
+            panic!("Expected message at index 0");
+        }
+
+        // Check the nested bundle
+        if let OscPacket::Bundle(ref bundle) = outer_bundle.packets[1] {
+            assert_eq!(bundle, &inner_bundle);
+        } else {
+            panic!("Expected bundle at index 1");
+        }
+    }
+
+    #[test]
+    fn bundle_add_methods_work_correctly() {
+        let mut bundle = Bundle::empty(42);
+
+        let msg1 = Message::with_strings("/test1", vec!["a"]);
+        let msg2 = Message::with_strings("/test2", vec!["b"]);
+        let nested_bundle = Bundle::with_messages(100, vec![msg2.clone()]);
+
+        bundle.add_message(msg1.clone());
+        bundle.add_bundle(nested_bundle.clone());
+
+        assert_eq!(bundle.packets.len(), 2);
+
+        // Verify message was added correctly
+        if let OscPacket::Message(ref msg) = bundle.packets[0] {
+            assert_eq!(msg, &msg1);
+        } else {
+            panic!("Expected message at index 0");
+        }
+
+        // Verify bundle was added correctly
+        if let OscPacket::Bundle(ref b) = bundle.packets[1] {
+            assert_eq!(b, &nested_bundle);
+        } else {
+            panic!("Expected bundle at index 1");
+        }
+    }
+
+    #[test]
+    fn bundle_with_messages_convenience_method() {
+        let messages = vec![
+            Message::with_strings("/msg1", vec!["hello"]),
+            Message::with_strings("/msg2", vec!["world"]),
+        ];
+
+        let bundle = Bundle::with_messages(42, messages.clone());
+
+        assert_eq!(bundle.timetag, 42);
+        assert_eq!(bundle.packets.len(), 2);
+
+        for (i, expected_msg) in messages.iter().enumerate() {
+            if let OscPacket::Message(ref msg) = bundle.packets[i] {
+                assert_eq!(msg, expected_msg);
+            } else {
+                panic!("Expected message at index {}", i);
+            }
+        }
     }
 }

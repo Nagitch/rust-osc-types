@@ -1,5 +1,5 @@
 [workspace]
-members = ["osc-types10", "osc-types11"]
+members = ["osc-types10", "osc-types11", "osc-codec10"]
 resolver = "2"
 
 [patch.crates-io]
